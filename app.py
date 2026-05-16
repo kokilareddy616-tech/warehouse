@@ -7,7 +7,7 @@ Run:
     python app.py
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,render_template
 from flask_cors import CORS
 import mysql.connector
 import jwt
@@ -18,14 +18,21 @@ import functools
 # CONFIGURATION - Edit these to match your MySQL setup
 # ============================================================
 
-DB_CONFIG = {
-    "host": "viaduct.proxy.rlwy.net",
-    "user": "root",
-    "password": "HnWZoalEiNjfFvAcDFCPuwDDSZRsPatg",
-    "database": "railway",
-    "port": 23259
+import os
 
+# We tell the app to look for these "Magic Keys" 
+# We will give these keys to Render later!
+DB_CONFIG = {
+    "host": os.environ.get("DB_HOST", "mysql-305544b6-kokilareddy616-a78b.a.aivencloud.com"),
+    "port": int(os.environ.get("DB_PORT", 11963)),
+    "user": os.environ.get("DB_USER", "avnadmin"),
+    "password": os.environ.get("DB_PASSWORD"),
+    "database": os.environ.get("DB_NAME", "defaultdb")
 }
+
+def get_db():
+    # This opens the door to the Aiven database
+    return mysql.connector.connect(**DB_CONFIG)
 
 JWT_SECRET = "warehouse_super_secret_key_2024"
 JWT_ALGORITHM = "HS256"
@@ -745,8 +752,22 @@ def delete_user(uid):
     return ok(msg="User deleted")
 
 
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+
 # ============================================================
 # RUN
 # ============================================================
+import os
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # We ask the sky computer: "Which port should I use?" 
+    # If it doesn't answer, we use 5000.
+    port = int(os.environ.get("PORT", 5000))
+    
+    # We tell the app to listen to EVERYONE (0.0.0.0) 
+    # instead of just your computer (localhost).
+    app.run(host="0.0.0.0", port=port)
