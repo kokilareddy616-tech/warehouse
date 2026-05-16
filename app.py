@@ -17,14 +17,14 @@ import functools
 # ============================================================
 # CONFIGURATION - Edit these to match your MySQL setup
 # ============================================================
+
 DB_CONFIG = {
-    "host": "localhost",
+    "host": "viaduct.proxy.rlwy.net",
     "user": "root",
-    "password": "k123",   # <-- Change this
-    "database": "warehouse_db",
-    "charset": "utf8mb4",
-    "autocommit": True,
-    "connection_timeout": 10,
+    "password": "HnWZoalEiNjfFvAcDFCPuwDDSZRsPatg",
+    "database": "railway",
+    "port": 23259
+
 }
 
 JWT_SECRET = "warehouse_super_secret_key_2024"
