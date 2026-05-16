@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WarehouseOS — Smart Inventory Tracker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+/* ===== ROOT VARIABLES ===== */
+:root {
+  --bg: #0a0e1a;
+  --surface: rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.08);
+  --glass: rgba(15,20,40,0.7);
+  --glass-border: rgba(255,255,255,0.1);
+  --accent: #00d4ff;
+  --accent2: #7b5ea7;
+  --accent3: #ff6b35;
+  --success: #00e676;
+  --warning: #ffab00;
+  --danger: #ff5252;
+  --text: #e8eaf6;
+  --text-dim: rgba(232,234,246,0.55);
+  --text-faint: rgba(232,234,246,0.3);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --transition: 0.2s ease;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ===== RESET ===== */
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--font);color:var(--text);background:var(--bg);}
+a{color:inherit;text-decoration:none;}
+button{cursor:pointer;border:none;font-family:var(--font);}
+input,select,textarea{font-family:var(--font);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:3px;}
+
+/* ===== BACKGROUND ===== */
+.bg-layer{
+  position:fixed;inset:0;z-index:0;
+  background: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+}
+.bg-overlay{
+  position:fixed;inset:0;z-index:1;
+  background: linear-gradient(135deg,
+    rgba(5,8,20,0.92) 0%,
+    rgba(10,15,35,0.88) 50%,
+    rgba(15,10,30,0.93) 100%);
+}
+
+/* ===== APP WRAPPER ===== */
+#app{position:relative;z-index:2;min-height:100vh;}
+
+/* ===== LOGIN PAGE ===== */
+#login-page{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:20px;
+}
+.login-card{
+  background:var(--glass);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--glass-border);
+  border-radius:24px;
+  padding:48px 44px;
+  width:100%;max-width:420px;
+  box-shadow:var(--shadow),0 0 60px rgba(0,212,255,0.08);
+  animation:slideUp 0.5s ease;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.login-logo{
+  text-align:center;margin-bottom:36px;
+}
+.login-logo i{
+  font-size:3rem;color:var(--accent);
+  display:block;margin-bottom:12px;
+  filter:drop-shadow(0 0 16px rgba(0,212,255,0.5));
+}
+.login-logo h1{font-size:1.7rem;font-weight:700;letter-spacing:-0.5px;}
+.login-logo h1 span{color:var(--accent);}
+.login-logo p{font-size:0.85rem;color:var(--text-dim);margin-top:4px;}
+.field{margin-bottom:20px;}
+.field label{display:block;font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin-bottom:8px;}
+.field-inner{position:relative;}
+.field-inner i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:0.9rem;}
+.field input{
+  width:100%;padding:13px 14px 13px 40px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-sm);
+  color:var(--text);font-size:0.95rem;
+  outline:none;transition:var(--transition);
+}
+.field input:focus{border-color:var(--accent);background:rgba(0,212,255,0.06);}
+.btn-login{
+  width:100%;padding:14px;margin-top:8px;
+  background:linear-gradient(135deg,var(--accent),#0088aa);
+  color:#000;font-size:1rem;font-weight:700;
+  border-radius:var(--radius-sm);
+  transition:var(--transition);letter-spacing:0.5px;
+}
+.btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,255,0.35);}
+.login-hint{
+  text-align:center;margin-top:20px;font-size:0.78rem;
+  color:var(--text-faint);
+  background:rgba(0,212,255,0.04);
+  border:1px solid rgba(0,212,255,0.12);
+  padding:10px;border-radius:8px;
+}
+.login-hint b{color:var(--accent);}
+.login-error{
+  background:rgba(255,82,82,0.12);
+  border:1px solid rgba(255,82,82,0.3);
+  color:var(--danger);font-size:0.85rem;
+  padding:10px 14px;border-radius:8px;
+  margin-bottom:16px;display:none;
+}
+
+/* ===== MAIN LAYOUT ===== */
+#main-page{display:none;flex-direction:column;min-height:100vh;}
+
+/* ===== NAV ===== */
+.navbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(10,14,26,0.85);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--glass-border);
+  padding:0 24px;height:62px;
+  display:flex;align-items:center;gap:16px;
+}
+.nav-brand{
+  display:flex;align-items:center;gap:10px;
+  font-size:1.1rem;font-weight:700;white-space:nowrap;
+}
+.nav-brand i{color:var(--accent);font-size:1.3rem;}
+.nav-brand span{color:var(--accent);}
+.nav-search{
+  flex:1;max-width:500px;
+  display:flex;gap:8px;align-items:center;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--glass-border);
+  border-radius:40px;padding:6px 16px;
+  transition:var(--transition);
+}
+.nav-search:focus-within{border-color:var(--accent);background:rgba(0,212,255,0.05);}
+.nav-search input{
+  flex:1;background:transparent;border:none;
+  color:var(--text);font-size:0.9rem;outline:none;
+}
+.nav-search input::placeholder{color:var(--text-faint);}
+.nav-search select{
+  background:transparent;border:none;
+  color:var(--text-dim);font-size:0.78rem;outline:none;
+  cursor:pointer;
+}
+.nav-search select option{background:#1a1f35;color:var(--text);}
+.nav-search i{color:var(--text-dim);font-size:0.85rem;}
+.nav-actions{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.nav-user{
+  display:flex;align-items:center;gap:8px;
+  font-size:0.85rem;color:var(--text-dim);
+}
+.nav-user .avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.8rem;font-weight:700;color:#fff;
+}
+.btn-icon{
+  background:rgba(255,255,255,0.06);
+  border:1px solid var(--glass-border);
+  color:var(--text-dim);
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.85rem;transition:var(--transition);
+}
+.btn-icon:hover{background:rgba(255,82,82,0.15);color:var(--danger);border-color:rgba(255,82,82,0.3);}
+
+/* ===== SEARCH RESULTS DROPDOWN ===== */
+.search-results-dropdown{
+  position:absolute;top:70px;left:24px;right:24px;max-width:560px;
+  background:rgba(15,20,40,0.97);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  z-index:200;display:none;
+  max-height:380px;overflow-y:auto;
+}
+.search-results-dropdown.open{display:block;}
+.search-item{
+  padding:12px 16px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  transition:var(--transition);cursor:pointer;
+}
+.search-item:hover{background:var(--surface-hover);}
+.search-item:last-child{border-bottom:none;}
+.search-item-type{
+  font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;
+  padding:3px 8px;border-radius:20px;
+  background:rgba(0,212,255,0.15);color:var(--accent);
+  white-space:nowrap;
+}
+.search-item-info{flex:1;}
+.search-item-name{font-size:0.9rem;font-weight:600;}
+.search-item-sub{font-size:0.75rem;color:var(--text-dim);}
+.search-no-results{padding:24px;text-align:center;color:var(--text-dim);}
+
+/* ===== TABS ===== */
+.tab-bar{
+  display:flex;gap:2px;padding:12px 24px 0;
+  overflow-x:auto;scrollbar-width:none;
+}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{
+  padding:10px 18px;border-radius:10px 10px 0 0;
+  background:transparent;color:var(--text-dim);
+  font-size:0.82rem;font-weight:600;
+  white-space:nowrap;transition:var(--transition);
+  border:1px solid transparent;border-bottom:none;
+  display:flex;align-items:center;gap:7px;
+}
+.tab:hover{background:var(--surface);color:var(--text);}
+.tab.active{
+  background:rgba(255,255,255,0.06);color:var(--accent);
+  border-color:var(--glass-border);
+  backdrop-filter:blur(10px);
+}
+.tab i{font-size:0.85rem;}
+
+/* ===== CONTENT AREA ===== */
+.content{flex:1;padding:24px;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;animation:fadeIn 0.2s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+/* ===== CARDS ===== */
+.glass-card{
+  background:var(--glass);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.card-header{
+  padding:18px 22px;border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;
+}
+.card-header h3{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+.card-header h3 i{color:var(--accent);}
+.card-body{padding:22px;}
+
+/* ===== STATS GRID ===== */
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  gap:14px;margin-bottom:24px;
+}
+.stat-card{
+  background:var(--glass);
+  backdrop-filter:blur(16px);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius);
+  padding:20px 22px;
+  position:relative;overflow:hidden;
+  transition:var(--transition);
+}
+.stat-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.18);}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--accent),transparent);}
+.stat-card.purple::before{background:linear-gradient(90deg,var(--accent2),transparent);}
+.stat-card.orange::before{background:linear-gradient(90deg,var(--accent3),transparent);}
+.stat-card.green::before{background:linear-gradient(90deg,var(--success),transparent);}
+.stat-card.red::before{background:linear-gradient(90deg,var(--danger),transparent);}
+.stat-card.yellow::before{background:linear-gradient(90deg,var(--warning),transparent);}
+.stat-icon{
+  width:42px;height:42px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;margin-bottom:14px;
+}
+.stat-card.blue .stat-icon{background:rgba(0,212,255,0.12);color:var(--accent);}
+.stat-card.purple .stat-icon{background:rgba(123,94,167,0.15);color:var(--accent2);}
+.stat-card.orange .stat-icon{background:rgba(255,107,53,0.12);color:var(--accent3);}
+.stat-card.green .stat-icon{background:rgba(0,230,118,0.1);color:var(--success);}
+.stat-card.red .stat-icon{background:rgba(255,82,82,0.1);color:var(--danger);}
+.stat-card.yellow .stat-icon{background:rgba(255,171,0,0.1);color:var(--warning);}
+.stat-value{font-size:1.7rem;font-weight:800;line-height:1;margin-bottom:6px;}
+.stat-label{font-size:0.76rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.6px;}
+
+/* ===== DASHBOARD GRID ===== */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr;}}
+
+/* ===== TABLES ===== */
+.table-wrapper{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{
+  padding:11px 14px;text-align:left;
+  font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;
+  color:var(--text-dim);border-bottom:1px solid var(--glass-border);
+  white-space:nowrap;
+}
+td{
+  padding:12px 14px;font-size:0.87rem;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  vertical-align:middle;
+}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+.td-name{font-weight:600;}
+.td-mono{font-family:monospace;font-size:0.82rem;color:var(--accent);}
+
+/* ===== BADGES ===== */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;
+  font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+}
+.badge-active,.badge-delivered,.badge-written_off{background:rgba(0,230,118,0.12);color:var(--success);}
+.badge-inactive,.badge-cancelled,.badge-blacklisted{background:rgba(255,82,82,0.12);color:var(--danger);}
+.badge-pending,.badge-reported{background:rgba(255,171,0,0.12);color:var(--warning);}
+.badge-processing,.badge-under_review{background:rgba(0,212,255,0.12);color:var(--accent);}
+.badge-shipped,.badge-returned_to_supplier{background:rgba(123,94,167,0.15);color:var(--accent2);}
+.badge-on_leave,.badge-maintenance{background:rgba(255,107,53,0.12);color:var(--accent3);}
+.badge-discontinued{background:rgba(255,82,82,0.08);color:#ff8a80;}
+.badge-low{background:rgba(255,82,82,0.15);color:var(--danger);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.6;}}
+
+/* ===== BUTTONS ===== */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:var(--radius-sm);
+  font-size:0.85rem;font-weight:600;transition:var(--transition);
+}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#0088aa);color:#000;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,212,255,0.3);}
+.btn-secondary{background:var(--surface);border:1px solid var(--glass-border);color:var(--text);}
+.btn-secondary:hover{background:var(--surface-hover);}
+.btn-danger{background:rgba(255,82,82,0.15);border:1px solid rgba(255,82,82,0.3);color:var(--danger);}
+.btn-danger:hover{background:rgba(255,82,82,0.25);}
+.btn-sm{padding:6px 12px;font-size:0.78rem;}
+.btn-icon-text{
+  background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);
+  color:var(--text-dim);padding:6px 12px;border-radius:8px;
+  font-size:0.8rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;
+  transition:var(--transition);
+}
+.btn-icon-text:hover{background:var(--surface-hover);color:var(--text);}
+.action-btns{display:flex;gap:6px;}
+
+/* ===== FORMS ===== */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+.form-group{display:flex;flex-direction:column;gap:7px;}
+.form-group label{font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);}
+.form-group input,.form-group select,.form-group textarea{
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--glass-border);
+  border-radius:8px;color:var(--text);
+  padding:10px 14px;font-size:0.9rem;outline:none;
+  transition:var(--transition);width:100%;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  border-color:var(--accent);background:rgba(0,212,255,0.04);
+}
+.form-group select option{background:#1a1f35;}
+.form-group textarea{resize:vertical;min-height:80px;}
+.form-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
+.form-title{font-size:1.1rem;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.form-title i{color:var(--accent);}
+
+/* ===== LOW STOCK ALERTS ===== */
+.alert-list{display:flex;flex-direction:column;gap:10px;}
+.alert-item{
+  background:rgba(255,82,82,0.08);
+  border:1px solid rgba(255,82,82,0.2);
+  border-radius:10px;padding:12px 16px;
+  display:flex;align-items:center;gap:12px;
+}
+.alert-item i{color:var(--danger);font-size:1rem;}
+.alert-info{flex:1;}
+.alert-name{font-size:0.9rem;font-weight:600;}
+.alert-sub{font-size:0.75rem;color:var(--text-dim);}
+.alert-qty{
+  font-size:1.1rem;font-weight:800;
+  color:var(--danger);
+}
+
+/* ===== HISTORY TIMELINE ===== */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.timeline-item{
+  display:flex;gap:14px;padding:14px 0;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.timeline-item:last-child{border-bottom:none;}
+.timeline-dot{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.85rem;flex-shrink:0;margin-top:2px;
+}
+.timeline-dot.restock{background:rgba(0,230,118,0.15);color:var(--success);}
+.timeline-dot.order{background:rgba(0,212,255,0.12);color:var(--accent);}
+.timeline-body{flex:1;}
+.timeline-title{font-size:0.88rem;font-weight:600;margin-bottom:3px;}
+.timeline-sub{font-size:0.76rem;color:var(--text-dim);}
+.timeline-time{font-size:0.72rem;color:var(--text-faint);margin-top:4px;}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:rgba(12,17,35,0.97);
+  border:1px solid var(--glass-border);
+  border-radius:20px;
+  width:100%;max-width:640px;
+  max-height:90vh;overflow-y:auto;
+  box-shadow:var(--shadow);
+  animation:slideUp 0.25s ease;
+}
+.modal-header{
+  padding:20px 24px;border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-header h3{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+.modal-header h3 i{color:var(--accent);}
+.modal-close{
+  background:none;color:var(--text-dim);font-size:1.1rem;
+  transition:var(--transition);padding:4px;
+}
+.modal-close:hover{color:var(--danger);}
+.modal-body{padding:24px;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--glass-border);display:flex;gap:10px;justify-content:flex-end;}
+
+/* ===== REFRESH INDICATOR ===== */
+.refresh-indicator{
+  position:fixed;bottom:20px;right:20px;z-index:300;
+  background:var(--glass);border:1px solid var(--glass-border);
+  border-radius:40px;padding:8px 16px;
+  font-size:0.75rem;color:var(--text-dim);
+  display:flex;align-items:center;gap:6px;
+  backdrop-filter:blur(12px);
+}
+.refresh-dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{
+  text-align:center;padding:48px 24px;color:var(--text-dim);
+}
+.empty-state i{font-size:3rem;display:block;margin-bottom:16px;opacity:0.3;}
+.empty-state p{font-size:0.9rem;}
+
+/* ===== TOAST ===== */
+#toast-container{position:fixed;top:74px;right:20px;z-index:600;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  background:rgba(15,20,40,0.97);
+  border:1px solid var(--glass-border);
+  border-radius:10px;padding:12px 18px;
+  font-size:0.85rem;display:flex;align-items:center;gap:10px;
+  backdrop-filter:blur(16px);
+  animation:toastIn 0.3s ease;min-width:240px;
+  box-shadow:var(--shadow);
+}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+.toast.success i{color:var(--success);}
+.toast.error i{color:var(--danger);}
+.toast.info i{color:var(--accent);}
+
+/* ===== LOADING ===== */
+.loading{display:flex;align-items:center;justify-content:center;padding:32px;color:var(--text-dim);}
+.spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,0.1);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin-right:10px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ===== RATING STARS ===== */
+.stars{color:var(--warning);font-size:0.75rem;letter-spacing:1px;}
+
+/* ===== MOBILE ===== */
+@media(max-width:640px){
+  .navbar{padding:0 14px;gap:10px;}
+  .nav-brand span:last-child{display:none;}
+  .content{padding:14px;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .form-grid{grid-template-columns:1fr;}
+  .stat-value{font-size:1.3rem;}
+  .tab{padding:8px 12px;font-size:0.76rem;}
+  .card-body{padding:14px;}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="bg-overlay"></div>
+
+<div id="app">
+
+<!-- ===== LOGIN PAGE ===== -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <i class="fas fa-warehouse"></i>
+      <h1>Warehouse<span>OS</span></h1>
+      <p>Smart Inventory & Warehouse Tracker</p>
+    </div>
+    <div class="login-error" id="login-error"><i class="fas fa-exclamation-circle"></i> <span id="login-error-msg"></span></div>
+    <div class="field">
+      <label>Username</label>
+      <div class="field-inner"><i class="fas fa-user"></i><input type="text" id="login-username" placeholder="Enter username" autocomplete="username"/></div>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <div class="field-inner"><i class="fas fa-lock"></i><input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password"/></div>
+    </div>
+    <button class="btn-login" id="btn-login"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+    <div class="login-hint">
+      <i class="fas fa-circle-info"></i> Demo: <b>admin / admin123</b> &nbsp;|&nbsp; <b>manager / manager123</b>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN PAGE ===== -->
+<div id="main-page">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <i class="fas fa-warehouse"></i>
+      <span>Warehouse</span><span style="color:var(--accent)">OS</span>
+    </div>
+    <div class="nav-search" style="position:relative;">
+      <i class="fas fa-search"></i>
+      <input type="text" id="global-search" placeholder="Search products, warehouses, suppliers..."/>
+      <select id="search-category">
+        <option value="all">All</option>
+        <option value="products">Products</option>
+        <option value="warehouses">Warehouses</option>
+        <option value="suppliers">Suppliers</option>
+        <option value="employees">Employees</option>
+      </select>
+    </div>
+    <div class="search-results-dropdown" id="search-dropdown"></div>
+    <div class="nav-actions">
+      <div class="nav-user">
+        <div class="avatar" id="nav-avatar">A</div>
+        <span id="nav-username" style="font-weight:600;"></span>
+        <span class="badge badge-active" id="nav-role" style="font-size:0.65rem;"></span>
+      </div>
+      <button class="btn-icon" title="Logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
+  </nav>
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab active" data-tab="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</button>
+    <button class="tab" data-tab="warehouses"><i class="fas fa-warehouse"></i> Warehouses</button>
+    <button class="tab" data-tab="suppliers"><i class="fas fa-truck"></i> Suppliers</button>
+    <button class="tab" data-tab="employees"><i class="fas fa-users"></i> Employees</button>
+    <button class="tab" data-tab="products"><i class="fas fa-boxes-stacked"></i> Products</button>
+    <button class="tab" data-tab="stock"><i class="fas fa-layer-group"></i> Stock</button>
+    <button class="tab" data-tab="orders"><i class="fas fa-file-invoice"></i> Orders</button>
+    <button class="tab" data-tab="history"><i class="fas fa-clock-rotate-left"></i> History</button>
+    <button class="tab" data-tab="badstock"><i class="fas fa-triangle-exclamation"></i> Bad Stock</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- DASHBOARD TAB -->
+    <div class="tab-pane active" id="tab-dashboard">
+      <div class="stats-grid" id="stats-grid">
+        <div class="loading"><div class="spinner"></div> Loading...</div>
+      </div>
+      <div class="dash-grid">
+        <div class="glass-card">
+          <div class="card-header">
+            <h3><i class="fas fa-triangle-exclamation"></i> Low Stock Alerts</h3>
+            <span class="badge badge-pending" id="low-stock-badge">—</span>
+          </div>
+          <div class="card-body" id="low-stock-list"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="glass-card">
+          <div class="card-header"><h3><i class="fas fa-receipt"></i> Recent Orders</h3></div>
+          <div class="card-body" id="recent-orders-list"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAREHOUSES TAB -->
+    <div class="tab-pane" id="tab-warehouses">
+      <div class="glass-card">
+        <div class="card-header">
+          <h3><i class="fas fa-warehouse"></i> Warehouses</h3>
+          <button class="btn btn-primary btn-sm" onclick="openModal('warehouse')"><i class="fas fa-plus"></i> Add Warehouse</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper"><table id="warehouse-table"><tbody><tr><td colspan="8"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS TAB -->
+    <div class="tab-pane" id="tab-suppliers">
+      <div class="glass-card">
+        <div class="card-header">
+          <h3><i class="fas fa-truck"></i> Suppliers</h3>
+          <button class="btn btn-primary btn-sm" onclick="openModal('supplier')"><i class="fas fa-plus"></i> Add Supplier</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper"><table id="supplier-table"><tbody><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES TAB -->
+    <div class="tab-pane" id="tab-employees">
+      <div class="glass-card">
+        <div class="card-header">
+          <h3><i class="fas fa-users"></i> Employees</h3>
+          <button class="btn btn-primary btn-sm" onclick="openModal('employee')"><i class="fas fa-plus"></i> Add Employee</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper"><table id="employee-table"><tbody><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS TAB -->
+    <div class="tab-pane" id="tab-products">
+      <div class="glass-card">
+        <div class="card-header">
+          <h3><i class="fas fa-boxes-stacked"></i> Products</h3>
+          <button class="btn btn-primary btn-sm" onclick="openModal('product')"><i class="fas fa-plus"></i> Add Product</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper"><table id="product-table"><tbody><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STOCK TAB -->
+    <div class="tab-pane" id="tab-stock">
+      <div class="glass-card">
+        <div class="card-header">
+          <h3><i class="fas fa-layer-group"></i> Stock Levels</h3>
+          <button class="btn btn-primary btn-sm" onclick="openModal('stock')"><i class="fas fa-plus"></i> Add/Update Stock</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper"><table id="stock-table"><tbody><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDERS TAB -->
+    <div class="tab-pane" id="tab-orders">
+      <div class="glass-card">
+        <div class="card-header">
+          <h3><i class="fas fa-file-invoice"></i> Orders</h3>
+          <button class="btn btn-primary btn-sm" onclick="openModal('order')"><i class="fas fa-plus"></i> New Order</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper"><table id="order-table"><tbody><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div class="tab-pane" id="tab-history">
+      <div class="glass-card">
+        <div class="card-header">
+          <h3><i class="fas fa-clock-rotate-left"></i> 30-Day Activity History</h3>
+          <button class="btn btn-secondary btn-sm" onclick="loadHistory()"><i class="fas fa-refresh"></i> Refresh</button>
+        </div>
+        <div class="card-body" id="history-container"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- BAD STOCK TAB -->
+    <div class="tab-pane" id="tab-badstock">
+      <div class="glass-card" style="margin-bottom:18px;">
+        <div class="card-header">
+          <h3><i class="fas fa-triangle-exclamation"></i> Report Bad Stock</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-grid" id="badstock-form-grid">
+            <div class="form-group"><label>Product</label><select id="bs-product"></select></div>
+            <div class="form-group"><label>Warehouse</label><select id="bs-warehouse"></select></div>
+            <div class="form-group"><label>Quantity</label><input type="number" id="bs-qty" min="1" placeholder="Qty affected"/></div>
+            <div class="form-group"><label>Reason</label>
+              <select id="bs-reason">
+                <option value="damaged">Damaged</option>
+                <option value="expired">Expired</option>
+                <option value="defective">Defective</option>
+                <option value="water_damage">Water Damage</option>
+                <option value="fire_damage">Fire Damage</option>
+                <option value="theft">Theft</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Estimated Loss (₹)</label><input type="number" id="bs-loss" min="0" placeholder="0.00"/></div>
+            <div class="form-group"><label>Status</label>
+              <select id="bs-status">
+                <option value="reported">Reported</option>
+                <option value="under_review">Under Review</option>
+                <option value="written_off">Written Off</option>
+                <option value="returned_to_supplier">Returned to Supplier</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1;"><label>Description</label><textarea id="bs-desc" placeholder="Describe the damage or issue..."></textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="submitBadStock()"><i class="fas fa-flag"></i> Submit Report</button>
+            <button class="btn btn-secondary" onclick="clearBadStockForm()"><i class="fas fa-times"></i> Clear</button>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="card-header"><h3><i class="fas fa-list"></i> Bad Stock Reports</h3></div>
+        <div class="card-body">
+          <div class="table-wrapper"><table id="badstock-table"><tbody><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main-page -->
+
+</div><!-- /app -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h3 id="modal-title"><i class="fas fa-circle-plus"></i> Add Record</h3>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- REFRESH INDICATOR -->
+<div class="refresh-indicator">
+  <div class="refresh-dot"></div>
+  <span>Auto-refresh every 30s</span>
+</div>
+
+<script>
+// ================================================================
+// CONFIG
+// ================================================================
+const API = 'http://localhost:5000/api';
+let token = localStorage.getItem('wos_token') || '';
+let currentUser = JSON.parse(localStorage.getItem('wos_user') || 'null');
+let refreshTimer = null;
+let searchTimer = null;
+
+// Cache for dropdowns
+let cachedWarehouses = [];
+let cachedProducts = [];
+let cachedEmployees = [];
+let cachedSuppliers = [];
+
+// ================================================================
+// UTILS
+// ================================================================
+function authHeaders(){
+  return {'Content-Type':'application/json','Authorization':'Bearer '+token};
+}
+
+async function apiFetch(path, opts={}){
+  const resp = await fetch(API+path, {
+    headers: authHeaders(),
+    ...opts
+  });
+  const data = await resp.json();
+  if(resp.status === 401){
+    doLogout(); return null;
+  }
+  return data;
+}
+
+function toast(msg, type='info', duration=3500){
+  const icons = {success:'fa-check-circle',error:'fa-times-circle',info:'fa-circle-info'};
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fas ${icons[type]||'fa-circle-info'}"></i><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(), duration);
+}
+
+function formatCurrency(v){
+  if(v==null) return '—';
+  return '₹' + Number(v).toLocaleString('en-IN',{maximumFractionDigits:0});
+}
+
+function formatDate(d){
+  if(!d) return '—';
+  try{ return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+  catch(e){ return d; }
+}
+
+function formatDatetime(d){
+  if(!d) return '—';
+  try{ return new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return d; }
+}
+
+function badge(status){
+  if(!status) return '';
+  const cls = 'badge badge-'+(status||'').replace(/\s+/g,'_').toLowerCase();
+  return `<span class="${cls}">${status}</span>`;
+}
+
+function starsHtml(r){
+  const full = Math.round(r||0);
+  return '<span class="stars">'+('★'.repeat(full)+'☆'.repeat(5-full))+'</span> '+Number(r||0).toFixed(1);
+}
+
+function stockBar(qty, level){
+  const pct = level>0 ? Math.min(100, Math.round(qty/level*100)) : 100;
+  const color = qty<=level ? '#ff5252' : qty<=level*1.5 ? '#ffab00' : '#00e676';
+  return `<div style="display:flex;align-items:center;gap:8px;">
+    <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+      <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div>
+    </div>
+    <span style="font-size:0.78rem;color:${color};font-weight:700;">${qty}</span>
+  </div>`;
+}
+
+// ================================================================
+// LOGIN
+// ================================================================
+document.getElementById('btn-login').addEventListener('click', doLogin);
+document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogin(){
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  const errEl = document.getElementById('login-error');
+  const errMsg = document.getElementById('login-error-msg');
+  errEl.style.display = 'none';
+  if(!username||!password){ errMsg.textContent='Please enter username and password.'; errEl.style.display='flex'; return; }
+  const btn = document.getElementById('btn-login');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(API+'/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await res.json();
+    if(data.success){
+      token = data.data.token;
+      currentUser = data.data.user;
+      localStorage.setItem('wos_token', token);
+      localStorage.setItem('wos_user', JSON.stringify(currentUser));
+      enterApp();
+    } else {
+      errMsg.textContent = data.message || 'Login failed';
+      errEl.style.display = 'flex';
+    }
+  } catch(e){
+    errMsg.textContent = 'Cannot connect to server. Ensure Flask is running on port 5000.';
+    errEl.style.display = 'flex';
+  }
+  btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+  btn.disabled = false;
+}
+
+function doLogout(){
+  token=''; currentUser=null;
+  localStorage.removeItem('wos_token');
+  localStorage.removeItem('wos_user');
+  clearInterval(refreshTimer);
+  document.getElementById('main-page').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+}
+
+function enterApp(){
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('main-page').style.display='flex';
+  document.getElementById('main-page').style.flexDirection='column';
+  document.getElementById('nav-username').textContent = currentUser.username;
+  document.getElementById('nav-role').textContent = currentUser.role;
+  document.getElementById('nav-avatar').textContent = (currentUser.username||'?')[0].toUpperCase();
+  initApp();
+}
+
+// ================================================================
+// INIT
+// ================================================================
+function initApp(){
+  setupTabs();
+  setupSearch();
+  loadAll();
+  refreshTimer = setInterval(loadAll, 30000);
+}
+
+function loadAll(){
+  loadStats();
+  loadLowStock();
+  loadRecentOrders();
+  loadWarehouses();
+  loadSuppliers();
+  loadEmployees();
+  loadProducts();
+  loadStock();
+  loadOrders();
+  loadHistory();
+  loadBadStock();
+  loadDropdownData();
+}
+
+// ================================================================
+// TABS
+// ================================================================
+function setupTabs(){
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+// ================================================================
+// SEARCH
+// ================================================================
+function setupSearch(){
+  const inp = document.getElementById('global-search');
+  const cat = document.getElementById('search-category');
+  const drop = document.getElementById('search-dropdown');
+  inp.addEventListener('input', ()=>{
+    clearTimeout(searchTimer);
+    const q = inp.value.trim();
+    if(q.length<2){ drop.classList.remove('open'); return; }
+    searchTimer = setTimeout(()=>doSearch(q, cat.value), 300);
+  });
+  cat.addEventListener('change', ()=>{
+    const q = inp.value.trim();
+    if(q.length>=2) doSearch(q, cat.value);
+  });
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('.nav-search') && !e.target.closest('#search-dropdown')){
+      drop.classList.remove('open');
+    }
+  });
+}
+
+async function doSearch(q, category){
+  const drop = document.getElementById('search-dropdown');
+  drop.innerHTML = '<div class="loading"><div class="spinner"></div> Searching...</div>';
+  drop.classList.add('open');
+  const data = await apiFetch(`/search?q=${encodeURIComponent(q)}&category=${category}`);
+  if(!data) return;
+  const items = data.data || [];
+  if(!items.length){
+    drop.innerHTML = '<div class="search-no-results"><i class="fas fa-search" style="opacity:0.3;font-size:1.5rem;display:block;margin-bottom:8px;"></i>No results found</div>';
+    return;
+  }
+  drop.innerHTML = items.map(item=>`
+    <div class="search-item" onclick="closeSearchDropdown()">
+      <span class="search-item-type">${item.type}</span>
+      <div class="search-item-info">
+        <div class="search-item-name">${item.name}</div>
+        <div class="search-item-sub">${item.city||item.email||item.role||item.sku||''} ${item.category?'· '+item.category:''}</div>
+      </div>
+      ${item.unit_price ? `<span style="font-size:0.8rem;color:var(--accent);font-weight:700;">${formatCurrency(item.unit_price)}</span>` : ''}
+      ${badge(item.status)}
+    </div>
+  `).join('');
+}
+
+function closeSearchDropdown(){ document.getElementById('search-dropdown').classList.remove('open'); }
+
+// ================================================================
+// STATS
+// ================================================================
+async function loadStats(){
+  const data = await apiFetch('/stats');
+  if(!data) return;
+  const s = data.data;
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card blue"><div class="stat-icon"><i class="fas fa-boxes-stacked"></i></div><div class="stat-value">${s.total_products}</div><div class="stat-label">Active Products</div></div>
+    <div class="stat-card green"><div class="stat-icon"><i class="fas fa-indian-rupee-sign"></i></div><div class="stat-value">${formatCurrency(s.stock_value)}</div><div class="stat-label">Total Stock Value</div></div>
+    <div class="stat-card red"><div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="stat-value">${s.low_stock_count}</div><div class="stat-label">Low Stock Alerts</div></div>
+    <div class="stat-card purple"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-value">${s.total_employees}</div><div class="stat-label">Active Employees</div></div>
+    <div class="stat-card orange"><div class="stat-icon"><i class="fas fa-warehouse"></i></div><div class="stat-value">${s.total_warehouses}</div><div class="stat-label">Active Warehouses</div></div>
+    <div class="stat-card yellow"><div class="stat-icon"><i class="fas fa-file-invoice"></i></div><div class="stat-value">${s.total_orders}</div><div class="stat-label">Total Orders</div></div>
+  `;
+  document.getElementById('low-stock-badge').textContent = s.low_stock_count + ' items';
+}
+
+// ================================================================
+// LOW STOCK
+// ================================================================
+async function loadLowStock(){
+  const data = await apiFetch('/stock/low');
+  if(!data) return;
+  const items = data.data || [];
+  const el = document.getElementById('low-stock-list');
+  if(!items.length){
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success);opacity:1;"></i><p>All stock levels are healthy!</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="alert-list">' + items.slice(0,8).map(i=>`
+    <div class="alert-item">
+      <i class="fas fa-circle-exclamation"></i>
+      <div class="alert-info">
+        <div class="alert-name">${i.name} <span class="badge badge-low">LOW</span></div>
+        <div class="alert-sub">${i.sku} · Reorder at: ${i.reorder_level}</div>
+      </div>
+      <div class="alert-qty">${i.total_quantity}</div>
+    </div>
+  `).join('') + '</div>';
+}
+
+// ================================================================
+// RECENT ORDERS
+// ================================================================
+async function loadRecentOrders(){
+  const data = await apiFetch('/orders');
+  if(!data) return;
+  const orders = (data.data||[]).slice(0,8);
+  const el = document.getElementById('recent-orders-list');
+  if(!orders.length){
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No orders yet</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="timeline">' + orders.map(o=>`
+    <div class="timeline-item">
+      <div class="timeline-dot order"><i class="fas fa-shopping-cart"></i></div>
+      <div class="timeline-body">
+        <div class="timeline-title">${o.customer_name} <span class="td-mono">${o.order_number}</span></div>
+        <div class="timeline-sub">${badge(o.status)} &nbsp;${formatCurrency(o.total_amount)}</div>
+        <div class="timeline-time"><i class="fas fa-clock" style="font-size:0.65rem;"></i> ${formatDatetime(o.created_at)}</div>
+      </div>
+    </div>
+  `).join('') + '</div>';
+}
+
+// ================================================================
+// WAREHOUSES
+// ================================================================
+async function loadWarehouses(){
+  const data = await apiFetch('/warehouses');
+  if(!data) return;
+  const rows = data.data || [];
+  cachedWarehouses = rows;
+  const tbody = document.querySelector('#warehouse-table tbody') || document.getElementById('warehouse-table');
+  document.getElementById('warehouse-table').innerHTML = `
+    <thead><tr>
+      <th>ID</th><th>Name</th><th>Location</th><th>City/State</th><th>Capacity</th><th>Manager</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>${rows.map(w=>`
+      <tr>
+        <td class="td-mono">#${w.id}</td>
+        <td class="td-name">${w.name}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.location}</td>
+        <td>${w.city}, ${w.state}</td>
+        <td>${Number(w.capacity).toLocaleString('en-IN')}</td>
+        <td>${w.manager_name||'—'}</td>
+        <td>${badge(w.status)}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon-text" onclick="editWarehouse(${w.id})"><i class="fas fa-pen"></i></button>
+          <button class="btn-icon-text" style="color:var(--danger);" onclick="deleteWarehouse(${w.id})"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>
+    `).join('')}</tbody>`;
+}
+
+// ================================================================
+// SUPPLIERS
+// ================================================================
+async function loadSuppliers(){
+  const data = await apiFetch('/suppliers');
+  if(!data) return;
+  const rows = data.data || [];
+  cachedSuppliers = rows;
+  document.getElementById('supplier-table').innerHTML = `
+    <thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Email</th><th>City</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${rows.map(s=>`
+      <tr>
+        <td class="td-mono">#${s.id}</td>
+        <td class="td-name">${s.name}</td>
+        <td>${s.contact_person||'—'}</td>
+        <td style="font-size:0.8rem;">${s.email||'—'}</td>
+        <td>${s.city||'—'}</td>
+        <td>${starsHtml(s.rating)}</td>
+        <td>${badge(s.status)}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon-text" onclick="editSupplier(${s.id})"><i class="fas fa-pen"></i></button>
+          <button class="btn-icon-text" style="color:var(--danger);" onclick="deleteSupplier(${s.id})"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>
+    `).join('')}</tbody>`;
+}
+
+// ================================================================
+// EMPLOYEES
+// ================================================================
+async function loadEmployees(){
+  const data = await apiFetch('/employees');
+  if(!data) return;
+  const rows = data.data || [];
+  cachedEmployees = rows;
+  document.getElementById('employee-table').innerHTML = `
+    <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Warehouse</th><th>Salary</th><th>Join Date</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${rows.map(e=>`
+      <tr>
+        <td class="td-mono">#${e.id}</td>
+        <td class="td-name">${e.name}</td>
+        <td>${e.role}</td>
+        <td>${e.warehouse_name||'—'}</td>
+        <td>${formatCurrency(e.salary)}</td>
+        <td>${formatDate(e.join_date)}</td>
+        <td>${badge(e.status)}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon-text" onclick="editEmployee(${e.id})"><i class="fas fa-pen"></i></button>
+          <button class="btn-icon-text" style="color:var(--danger);" onclick="deleteEmployee(${e.id})"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>
+    `).join('')}</tbody>`;
+}
+
+// ================================================================
+// PRODUCTS
+// ================================================================
+async function loadProducts(){
+  const data = await apiFetch('/products');
+  if(!data) return;
+  const rows = data.data || [];
+  cachedProducts = rows;
+  document.getElementById('product-table').innerHTML = `
+    <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Reorder At</th><th>Supplier</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${rows.map(p=>`
+      <tr>
+        <td class="td-mono">${p.sku}</td>
+        <td class="td-name">${p.name}</td>
+        <td>${p.category||'—'}</td>
+        <td style="font-weight:700;">${formatCurrency(p.unit_price)}</td>
+        <td>${stockBar(p.total_stock||0, p.reorder_level)}</td>
+        <td>${p.reorder_level}</td>
+        <td>${p.supplier_name||'—'}</td>
+        <td>${badge(p.status)}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon-text" onclick="editProduct(${p.id})"><i class="fas fa-pen"></i></button>
+          <button class="btn-icon-text" style="color:var(--danger);" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>
+    `).join('')}</tbody>`;
+}
+
+// ================================================================
+// STOCK
+// ================================================================
+async function loadStock(){
+  const data = await apiFetch('/stock');
+  if(!data) return;
+  const rows = data.data || [];
+  document.getElementById('stock-table').innerHTML = `
+    <thead><tr><th>ID</th><th>Product</th><th>Warehouse</th><th>Quantity</th><th>Stock Value</th><th>Reorder Level</th><th>Last Restocked</th><th>Actions</th></tr></thead>
+    <tbody>${rows.map(s=>`
+      <tr>
+        <td class="td-mono">#${s.id}</td>
+        <td class="td-name">${s.product_name} <span class="td-mono" style="font-size:0.72rem;">${s.sku}</span></td>
+        <td>${s.warehouse_name}</td>
+        <td>${stockBar(s.quantity, s.reorder_level)}</td>
+        <td style="font-weight:600;">${formatCurrency(s.stock_value)}</td>
+        <td>${s.reorder_level}</td>
+        <td>${formatDatetime(s.last_restocked)}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon-text" onclick="editStock(${s.id})"><i class="fas fa-pen"></i></button>
+          <button class="btn-icon-text" style="color:var(--danger);" onclick="deleteStock(${s.id})"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>
+    `).join('')}</tbody>`;
+}
+
+// ================================================================
+// ORDERS
+// ================================================================
+async function loadOrders(){
+  const data = await apiFetch('/orders');
+  if(!data) return;
+  const rows = data.data || [];
+  document.getElementById('order-table').innerHTML = `
+    <thead><tr><th>Order #</th><th>Customer</th><th>Warehouse</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+    <tbody>${rows.map(o=>`
+      <tr>
+        <td class="td-mono">${o.order_number}</td>
+        <td class="td-name">${o.customer_name}</td>
+        <td>${o.warehouse_name||'—'}</td>
+        <td style="text-align:center;">${o.item_count||0}</td>
+        <td style="font-weight:700;">${formatCurrency(o.total_amount)}</td>
+        <td>${badge(o.status)}</td>
+        <td>${formatDatetime(o.created_at)}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon-text" onclick="editOrder(${o.id})"><i class="fas fa-pen"></i></button>
+          <button class="btn-icon-text" style="color:var(--danger);" onclick="deleteOrder(${o.id})"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>
+    `).join('')}</tbody>`;
+}
+
+// ================================================================
+// HISTORY
+// ================================================================
+async function loadHistory(){
+  const data = await apiFetch('/history');
+  if(!data) return;
+  const items = data.data || [];
+  const el = document.getElementById('history-container');
+  if(!items.length){
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>No activity in the last 30 days</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="timeline">' + items.map(item=>{
+    if(item.event_type==='restock'){
+      return `<div class="timeline-item">
+        <div class="timeline-dot restock"><i class="fas fa-box-open"></i></div>
+        <div class="timeline-body">
+          <div class="timeline-title">Restock: ${item.product_name} <span class="td-mono">${item.sku}</span></div>
+          <div class="timeline-sub">${item.warehouse_name} · <b>+${item.quantity} units</b> by ${item.done_by||'Unknown'}</div>
+          ${item.notes?`<div class="timeline-sub" style="font-style:italic;margin-top:2px;">${item.notes}</div>`:''}
+          <div class="timeline-time"><i class="fas fa-clock" style="font-size:0.65rem;"></i> ${formatDatetime(item.event_time)}</div>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="timeline-item">
+        <div class="timeline-dot order"><i class="fas fa-file-invoice"></i></div>
+        <div class="timeline-body">
+          <div class="timeline-title">Order ${item.order_number}: ${item.customer_name}</div>
+          <div class="timeline-sub">${badge(item.status)} &nbsp;${formatCurrency(item.total_amount)} · ${item.warehouse_name||'N/A'}</div>
+          <div class="timeline-time"><i class="fas fa-clock" style="font-size:0.65rem;"></i> ${formatDatetime(item.event_time)}</div>
+        </div>
+      </div>`;
+    }
+  }).join('') + '</div>';
+}
+
+// ================================================================
+// BAD STOCK
+// ================================================================
+async function loadBadStock(){
+  const data = await apiFetch('/bad_stock');
+  if(!data) return;
+  const rows = data.data || [];
+  document.getElementById('badstock-table').innerHTML = `
+    <thead><tr><th>ID</th><th>Product</th><th>Warehouse</th><th>Qty</th><th>Reason</th><th>Est. Loss</th><th>Status</th><th>Reported</th><th>Actions</th></tr></thead>
+    <tbody>${rows.map(b=>`
+      <tr>
+        <td class="td-mono">#${b.id}</td>
+        <td class="td-name">${b.product_name}</td>
+        <td>${b.warehouse_name}</td>
+        <td style="font-weight:700;color:var(--danger);">${b.quantity}</td>
+        <td>${b.reason.replace(/_/g,' ')}</td>
+        <td style="color:var(--warning);font-weight:700;">${formatCurrency(b.estimated_loss)}</td>
+        <td>${badge(b.status)}</td>
+        <td>${formatDatetime(b.reported_at)}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon-text" style="color:var(--danger);" onclick="deleteBadStock(${b.id})"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>
+    `).join('')}</tbody>`;
+}
+
+async function loadDropdownData(){
+  // Already cached from other loads — just populate bad stock form
+  if(cachedProducts.length){
+    const sel = document.getElementById('bs-product');
+    sel.innerHTML = cachedProducts.map(p=>`<option value="${p.id}">${p.name} (${p.sku})</option>`).join('');
+  }
+  if(cachedWarehouses.length){
+    const sel = document.getElementById('bs-warehouse');
+    sel.innerHTML = cachedWarehouses.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  }
+}
+
+async function submitBadStock(){
+  const payload = {
+    product_id: parseInt(document.getElementById('bs-product').value),
+    warehouse_id: parseInt(document.getElementById('bs-warehouse').value),
+    quantity: parseInt(document.getElementById('bs-qty').value),
+    reason: document.getElementById('bs-reason').value,
+    description: document.getElementById('bs-desc').value,
+    estimated_loss: parseFloat(document.getElementById('bs-loss').value)||0,
+    status: document.getElementById('bs-status').value,
+  };
+  if(!payload.quantity||payload.quantity<1){ toast('Please enter a valid quantity','error'); return; }
+  const data = await apiFetch('/bad_stock',{method:'POST',body:JSON.stringify(payload)});
+  if(data&&data.success){ toast('Bad stock report submitted','success'); clearBadStockForm(); loadBadStock(); }
+  else toast(data?.message||'Error submitting report','error');
+}
+
+function clearBadStockForm(){
+  document.getElementById('bs-qty').value='';
+  document.getElementById('bs-loss').value='';
+  document.getElementById('bs-desc').value='';
+}
+
+async function deleteBadStock(id){
+  if(!confirm('Delete this bad stock report?')) return;
+  const data = await apiFetch('/bad_stock/'+id,{method:'DELETE'});
+  if(data&&data.success){ toast('Report deleted','success'); loadBadStock(); }
+}
+
+// ================================================================
+// MODAL SYSTEM
+// ================================================================
+function openModal(type, record=null){
+  const overlay = document.getElementById('modal-overlay');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const footer = document.getElementById('modal-footer');
+  const isEdit = record !== null;
+  const icons = {warehouse:'fa-warehouse',supplier:'fa-truck',employee:'fa-user',product:'fa-box',stock:'fa-layer-group',order:'fa-file-invoice'};
+  title.innerHTML = `<i class="fas ${icons[type]||'fa-circle-plus'}"></i> ${isEdit?'Edit':'Add'} ${type.charAt(0).toUpperCase()+type.slice(1)}`;
+
+  const wOpts = cachedWarehouses.map(w=>`<option value="${w.id}" ${record&&record.warehouse_id==w.id?'selected':''}>${w.name}</option>`).join('');
+  const pOpts = cachedProducts.map(p=>`<option value="${p.id}" ${record&&record.product_id==p.id?'selected':''}>${p.name}</option>`).join('');
+  const sOpts = cachedSuppliers.map(s=>`<option value="${s.id}" ${record&&record.supplier_id==s.id?'selected':''}>${s.name}</option>`).join('');
+  const eOpts = cachedEmployees.map(e=>`<option value="${e.id}" ${record&&record.restocked_by==e.id?'selected':''}>${e.name}</option>`).join('');
+
+  const forms = {
+    warehouse:`
+      <div class="form-grid">
+        <div class="form-group"><label>Name</label><input id="f-name" value="${record?.name||''}" placeholder="Warehouse name"/></div>
+        <div class="form-group"><label>Location</label><input id="f-location" value="${record?.location||''}" placeholder="Address"/></div>
+        <div class="form-group"><label>City</label><input id="f-city" value="${record?.city||''}" placeholder="City"/></div>
+        <div class="form-group"><label>State</label><input id="f-state" value="${record?.state||''}" placeholder="State"/></div>
+        <div class="form-group"><label>Capacity</label><input type="number" id="f-capacity" value="${record?.capacity||''}" placeholder="Max units"/></div>
+        <div class="form-group"><label>Manager</label><input id="f-manager" value="${record?.manager_name||''}" placeholder="Manager name"/></div>
+        <div class="form-group"><label>Phone</label><input id="f-phone" value="${record?.contact_phone||''}" placeholder="+91-XXXXXXXXXX"/></div>
+        <div class="form-group"><label>Status</label><select id="f-status"><option value="active" ${record?.status=='active'?'selected':''}>Active</option><option value="inactive" ${record?.status=='inactive'?'selected':''}>Inactive</option><option value="maintenance" ${record?.status=='maintenance'?'selected':''}>Maintenance</option></select></div>
+      </div>`,
+    supplier:`
+      <div class="form-grid">
+        <div class="form-group"><label>Company Name</label><input id="f-name" value="${record?.name||''}" placeholder="Supplier name"/></div>
+        <div class="form-group"><label>Contact Person</label><input id="f-contact" value="${record?.contact_person||''}" placeholder="Name"/></div>
+        <div class="form-group"><label>Email</label><input type="email" id="f-email" value="${record?.email||''}" placeholder="email@company.com"/></div>
+        <div class="form-group"><label>Phone</label><input id="f-phone" value="${record?.phone||''}" placeholder="+91-XXXXXXXXXX"/></div>
+        <div class="form-group"><label>City</label><input id="f-city" value="${record?.city||''}" placeholder="City"/></div>
+        <div class="form-group"><label>Country</label><input id="f-country" value="${record?.country||'India'}" placeholder="India"/></div>
+        <div class="form-group"><label>Rating (1-5)</label><input type="number" min="1" max="5" step="0.1" id="f-rating" value="${record?.rating||4.0}"/></div>
+        <div class="form-group"><label>Status</label><select id="f-status"><option value="active" ${record?.status!='inactive'&&record?.status!='blacklisted'?'selected':''}>Active</option><option value="inactive" ${record?.status=='inactive'?'selected':''}>Inactive</option><option value="blacklisted" ${record?.status=='blacklisted'?'selected':''}>Blacklisted</option></select></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Address</label><textarea id="f-address">${record?.address||''}</textarea></div>
+      </div>`,
+    employee:`
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name</label><input id="f-name" value="${record?.name||''}" placeholder="Employee name"/></div>
+        <div class="form-group"><label>Email</label><input type="email" id="f-email" value="${record?.email||''}" placeholder="email@company.com"/></div>
+        <div class="form-group"><label>Phone</label><input id="f-phone" value="${record?.phone||''}" placeholder="+91-XXXXXXXXXX"/></div>
+        <div class="form-group"><label>Role</label><input id="f-role" value="${record?.role||''}" placeholder="Job title"/></div>
+        <div class="form-group"><label>Warehouse</label><select id="f-warehouse"><option value="">-- None --</option>${wOpts}</select></div>
+        <div class="form-group"><label>Salary (₹)</label><input type="number" id="f-salary" value="${record?.salary||''}" placeholder="Monthly salary"/></div>
+        <div class="form-group"><label>Join Date</label><input type="date" id="f-joindate" value="${record?.join_date||''}"/></div>
+        <div class="form-group"><label>Status</label><select id="f-status"><option value="active" ${record?.status=='active'?'selected':''}>Active</option><option value="inactive" ${record?.status=='inactive'?'selected':''}>Inactive</option><option value="on_leave" ${record?.status=='on_leave'?'selected':''}>On Leave</option></select></div>
+      </div>`,
+    product:`
+      <div class="form-grid">
+        <div class="form-group"><label>Product Name</label><input id="f-name" value="${record?.name||''}" placeholder="Product name"/></div>
+        <div class="form-group"><label>SKU</label><input id="f-sku" value="${record?.sku||''}" placeholder="SKU-001"/></div>
+        <div class="form-group"><label>Category</label><input id="f-category" value="${record?.category||''}" placeholder="e.g. Electronics"/></div>
+        <div class="form-group"><label>Unit Price (₹)</label><input type="number" id="f-price" value="${record?.unit_price||''}" placeholder="0.00"/></div>
+        <div class="form-group"><label>Unit</label><input id="f-unit" value="${record?.unit||'piece'}" placeholder="piece/roll/kg"/></div>
+        <div class="form-group"><label>Reorder Level</label><input type="number" id="f-reorder" value="${record?.reorder_level||50}" placeholder="50"/></div>
+        <div class="form-group"><label>Supplier</label><select id="f-supplier"><option value="">-- None --</option>${sOpts}</select></div>
+        <div class="form-group"><label>Status</label><select id="f-status"><option value="active" ${record?.status=='active'||!record?'selected':''}>Active</option><option value="discontinued" ${record?.status=='discontinued'?'selected':''}>Discontinued</option><option value="pending" ${record?.status=='pending'?'selected':''}>Pending</option></select></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Description</label><textarea id="f-desc">${record?.description||''}</textarea></div>
+      </div>`,
+    stock:`
+      <div class="form-grid">
+        <div class="form-group"><label>Product</label><select id="f-product"><option value="">-- Select --</option>${pOpts}</select></div>
+        <div class="form-group"><label>Warehouse</label><select id="f-warehouse"><option value="">-- Select --</option>${wOpts}</select></div>
+        <div class="form-group"><label>Quantity</label><input type="number" id="f-qty" value="${record?.quantity||''}" min="0" placeholder="0"/></div>
+        <div class="form-group"><label>Restocked By</label><select id="f-employee"><option value="">-- None --</option>${eOpts}</select></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="f-notes">${record?.notes||''}</textarea></div>
+      </div>`,
+    order:`
+      <div class="form-grid">
+        <div class="form-group"><label>Order Number</label><input id="f-orderno" value="${record?.order_number||'ORD-'+Date.now()}" placeholder="ORD-2024-XXX"/></div>
+        <div class="form-group"><label>Customer Name</label><input id="f-customer" value="${record?.customer_name||''}" placeholder="Customer or company name"/></div>
+        <div class="form-group"><label>Customer Email</label><input type="email" id="f-email" value="${record?.customer_email||''}" placeholder="email@company.com"/></div>
+        <div class="form-group"><label>Customer Phone</label><input id="f-phone" value="${record?.customer_phone||''}" placeholder="+91-XXXXXXXXXX"/></div>
+        <div class="form-group"><label>Warehouse</label><select id="f-warehouse"><option value="">-- None --</option>${wOpts}</select></div>
+        <div class="form-group"><label>Status</label><select id="f-status">
+          <option value="pending" ${record?.status=='pending'||!record?'selected':''}>Pending</option>
+          <option value="processing" ${record?.status=='processing'?'selected':''}>Processing</option>
+          <option value="shipped" ${record?.status=='shipped'?'selected':''}>Shipped</option>
+          <option value="delivered" ${record?.status=='delivered'?'selected':''}>Delivered</option>
+          <option value="cancelled" ${record?.status=='cancelled'?'selected':''}>Cancelled</option>
+        </select></div>
+        <div class="form-group"><label>Total Amount (₹)</label><input type="number" id="f-amount" value="${record?.total_amount||''}" placeholder="0.00"/></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Shipping Address</label><textarea id="f-address">${record?.shipping_address||''}</textarea></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="f-notes">${record?.notes||''}</textarea></div>
+      </div>`,
+  };
+
+  body.innerHTML = forms[type] || '<p style="color:var(--text-dim);">Form not available</p>';
+
+  const saveFns = {
+    warehouse: ()=>{
+      const p = {name:v('f-name'),location:v('f-location'),city:v('f-city'),state:v('f-state'),capacity:v('f-capacity'),manager_name:v('f-manager'),contact_phone:v('f-phone'),status:v('f-status')};
+      return isEdit ? apiFetch('/warehouses/'+record.id,{method:'PUT',body:JSON.stringify(p)}) : apiFetch('/warehouses',{method:'POST',body:JSON.stringify(p)});
+    },
+    supplier: ()=>{
+      const p = {name:v('f-name'),contact_person:v('f-contact'),email:v('f-email'),phone:v('f-phone'),city:v('f-city'),country:v('f-country'),rating:v('f-rating'),status:v('f-status'),address:v('f-address')};
+      return isEdit ? apiFetch('/suppliers/'+record.id,{method:'PUT',body:JSON.stringify(p)}) : apiFetch('/suppliers',{method:'POST',body:JSON.stringify(p)});
+    },
+    employee: ()=>{
+      const p = {name:v('f-name'),email:v('f-email'),phone:v('f-phone'),role:v('f-role'),warehouse_id:v('f-warehouse')||null,salary:v('f-salary')||null,join_date:v('f-joindate')||null,status:v('f-status')};
+      return isEdit ? apiFetch('/employees/'+record.id,{method:'PUT',body:JSON.stringify(p)}) : apiFetch('/employees',{method:'POST',body:JSON.stringify(p)});
+    },
+    product: ()=>{
+      const p = {name:v('f-name'),sku:v('f-sku'),category:v('f-category'),unit_price:v('f-price'),unit:v('f-unit'),reorder_level:v('f-reorder'),supplier_id:v('f-supplier')||null,status:v('f-status'),description:v('f-desc')};
+      return isEdit ? apiFetch('/products/'+record.id,{method:'PUT',body:JSON.stringify(p)}) : apiFetch('/products',{method:'POST',body:JSON.stringify(p)});
+    },
+    stock: ()=>{
+      const p = {product_id:v('f-product'),warehouse_id:v('f-warehouse'),quantity:v('f-qty'),restocked_by:v('f-employee')||null,notes:v('f-notes')};
+      return isEdit ? apiFetch('/stock/'+record.id,{method:'PUT',body:JSON.stringify(p)}) : apiFetch('/stock',{method:'POST',body:JSON.stringify(p)});
+    },
+    order: ()=>{
+      const p = {order_number:v('f-orderno'),customer_name:v('f-customer'),customer_email:v('f-email'),customer_phone:v('f-phone'),warehouse_id:v('f-warehouse')||null,status:v('f-status'),total_amount:v('f-amount')||0,shipping_address:v('f-address'),notes:v('f-notes')};
+      return isEdit ? apiFetch('/orders/'+record.id,{method:'PUT',body:JSON.stringify(p)}) : apiFetch('/orders',{method:'POST',body:JSON.stringify(p)});
+    },
+  };
+
+  const reloads = {warehouse:loadWarehouses,supplier:loadSuppliers,employee:loadEmployees,product:loadProducts,stock:loadStock,order:loadOrders};
+
+  footer.innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()"><i class="fas fa-times"></i> Cancel</button>
+    <button class="btn btn-primary" id="modal-save-btn"><i class="fas fa-save"></i> ${isEdit?'Update':'Save'}</button>
+  `;
+  document.getElementById('modal-save-btn').addEventListener('click', async ()=>{
+    const saveBtn = document.getElementById('modal-save-btn');
+    saveBtn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...'; saveBtn.disabled=true;
+    try{
+      const result = await saveFns[type]();
+      if(result&&result.success){
+        toast(`${type} ${isEdit?'updated':'created'} successfully!`,'success');
+        closeModal();
+        if(reloads[type]) reloads[type]();
+        loadStats();
+      } else {
+        toast(result?.message||'Save failed','error');
+      }
+    } catch(e){ toast('Error: '+e.message,'error'); }
+    saveBtn.innerHTML=`<i class="fas fa-save"></i> ${isEdit?'Update':'Save'}`;
+    saveBtn.disabled=false;
+  });
+
+  overlay.classList.add('open');
+}
+
+function v(id){ const el=document.getElementById(id); return el?el.value:''; }
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+function handleOverlayClick(e){ if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+
+// Edit functions — fetch record then open modal
+async function editWarehouse(id){ const d=await apiFetch('/warehouses/'+id); if(d) openModal('warehouse',d.data); }
+async function editSupplier(id){ const d=await apiFetch('/suppliers/'+id); if(d) openModal('supplier',d.data); }
+async function editEmployee(id){ const d=await apiFetch('/employees/'+id); if(d) openModal('employee',d.data); }
+async function editProduct(id){ const d=await apiFetch('/products/'+id); if(d) openModal('product',d.data); }
+async function editStock(id){ const d=await apiFetch('/stock'); const rec=(d?.data||[]).find(s=>s.id===id); if(rec) openModal('stock',rec); }
+async function editOrder(id){ const d=await apiFetch('/orders/'+id); if(d) openModal('order',d.data); }
+
+// Delete functions
+async function deleteWarehouse(id){ if(!confirm('Delete this warehouse?')) return; const d=await apiFetch('/warehouses/'+id,{method:'DELETE'}); if(d?.success){toast('Warehouse deleted','success');loadWarehouses();} }
+async function deleteSupplier(id){ if(!confirm('Delete this supplier?')) return; const d=await apiFetch('/suppliers/'+id,{method:'DELETE'}); if(d?.success){toast('Supplier deleted','success');loadSuppliers();} }
+async function deleteEmployee(id){ if(!confirm('Delete this employee?')) return; const d=await apiFetch('/employees/'+id,{method:'DELETE'}); if(d?.success){toast('Employee deleted','success');loadEmployees();} }
+async function deleteProduct(id){ if(!confirm('Delete this product?')) return; const d=await apiFetch('/products/'+id,{method:'DELETE'}); if(d?.success){toast('Product deleted','success');loadProducts();} }
+async function deleteStock(id){ if(!confirm('Remove this stock record?')) return; const d=await apiFetch('/stock/'+id,{method:'DELETE'}); if(d?.success){toast('Stock record deleted','success');loadStock();} }
+async function deleteOrder(id){ if(!confirm('Delete this order?')) return; const d=await apiFetch('/orders/'+id,{method:'DELETE'}); if(d?.success){toast('Order deleted','success');loadOrders();} }
+
+// ================================================================
+// AUTO-INIT ON PAGE LOAD
+// ================================================================
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(token && currentUser){
+    enterApp();
+  }
+});
+</script>
+</body>
+</html>
